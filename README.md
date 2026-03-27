@@ -1,4 +1,4 @@
-```markdown
+
 # WebRTC Streamer for OBS — Multi-Camera Edition
 
 **Copyright © 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.**
@@ -10,8 +10,6 @@ Multi-camera low-latency WebRTC streaming from mobile devices to OBS Studio over
 ---
 
 ## Architecture
-
-```
 
 Phones (/sender) ──WS──┐
 │
@@ -29,8 +27,6 @@ Phones (/sender) ──WS──┐
 ▲
 │
 HTTP (OBS /receiver)
-
-````
 
 ---
 

@@ -11,6 +11,7 @@ Multi-camera low-latency WebRTC streaming from mobile devices to OBS Studio over
 
 ## Architecture
 
+```
 Phones (/sender) ──WS──┐
 │
 ▼
@@ -27,6 +28,7 @@ Phones (/sender) ──WS──┐
 ▲
 │
 HTTP (OBS /receiver)
+```
 
 ---
 
@@ -123,5 +125,3 @@ MIT License
 Stephen Hsu
 [chiacheng.hsu@owasp.org](mailto:chiacheng.hsu@owasp.org)
 
-👉 ⭐「GitHub 封面等級 README（含圖片 + demo）」
-```

@@ -1,0 +1,42 @@
+# Copyright (c) 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.
+# Docker Compose – WebRTC Streamer (LAN deployment)
+
+services:
+  # ── Backend: FastAPI Signaling Server ────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: webrtc-backend
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - internal
+    # NOT exposed to host — only Caddy can reach it
+
+  # ── Caddy: HTTPS + Frontend static files ────────────
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    container_name: webrtc-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
+    depends_on:
+      - backend
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge

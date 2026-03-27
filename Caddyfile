@@ -1,0 +1,37 @@
+# HTTP only version (no HTTPS, no TLS issues)
+{
+	auto_https off
+}
+
+:80 {
+
+	# ── Security Headers（保留，但移除 HTTPS 限制） ───────
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "ALLOWALL"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=*, microphone=*"
+		Content-Security-Policy "default-src 'self' ws://localhost; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' ws://localhost; media-src 'self' blob:; img-src 'self' data: blob:"
+	}
+
+	# ── WebSocket signaling ──────────────────────────────
+	handle /ws/* {
+		reverse_proxy backend:8000
+	}
+
+	# ── Backend API ──────────────────────────────────────
+	handle /health {
+		reverse_proxy backend:8000
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# ── Frontend ─────────────────────────────────────────
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

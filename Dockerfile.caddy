@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.
+# Multi-stage: build React frontend, then serve with Caddy
+
+# ── Stage 1: Build frontend ──────────────────────────
+FROM node:20-alpine AS frontend-build
+WORKDIR /app
+COPY frontend/package.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
+
+# ── Stage 2: Caddy with static files + config ────────
+FROM caddy:2-alpine
+COPY --from=frontend-build /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile

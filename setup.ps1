@@ -96,7 +96,7 @@ $envContent = @"
 # Copyright (c) 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.
 
 LAN_IP=$lanIP
-ALLOWED_ORIGINS=https://${lanIP}:443,https://${lanIP}
+ALLOWED_ORIGINS=https://${lanIP}:443,https://${lanIP},http://${lanIP}:80,http://${lanIP}
 "@
 
 $envContent | Out-File -FilePath ".env" -Encoding utf8 -Force
@@ -137,20 +137,28 @@ Write-Host "  ╔═════════════════════
 Write-Host "  ║          SETUP COMPLETE                  ║" -ForegroundColor Green
 Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
-Write-Host "  URLs:" -ForegroundColor White
+Write-Host "  HTTPS (recommended):" -ForegroundColor White
 Write-Host "  ────────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host "  Home:      " -NoNewline; Write-Host "https://${lanIP}" -ForegroundColor Cyan
 Write-Host "  Sender:    " -NoNewline; Write-Host "https://${lanIP}/sender" -ForegroundColor Yellow
 Write-Host "  Receiver:  " -NoNewline; Write-Host "https://${lanIP}/receiver" -ForegroundColor Magenta
+Write-Host "  CA Cert:   " -NoNewline; Write-Host "https://${lanIP}/cert" -ForegroundColor DarkYellow
+Write-Host ""
+Write-Host "  HTTP (fallback — camera may not work on all browsers):" -ForegroundColor White
+Write-Host "  ────────────────────────────────────────" -ForegroundColor DarkGray
+Write-Host "  Sender:    " -NoNewline; Write-Host "http://${lanIP}/sender" -ForegroundColor Yellow
+Write-Host "  Receiver:  " -NoNewline; Write-Host "http://${lanIP}/receiver" -ForegroundColor Magenta
 Write-Host "  ────────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  QUICK START:" -ForegroundColor White
-Write-Host "  1. Open Sender URL on your phone (accept self-signed cert warning)" -ForegroundColor DarkGray
-Write-Host "  2. Add Receiver URL as OBS Browser Source" -ForegroundColor DarkGray
-Write-Host "  3. Tap START on the phone" -ForegroundColor DarkGray
+Write-Host "  1. On phone: open https://${lanIP}/sender (accept cert warning)" -ForegroundColor DarkGray
+Write-Host "  2. If camera blocked: install CA cert from https://${lanIP}/cert" -ForegroundColor DarkGray
+Write-Host "  3. In OBS: add Browser Source -> https://${lanIP}/receiver" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  TIP: For trusted certs on mobile, export Caddy's root CA:" -ForegroundColor DarkGray
-Write-Host "    docker cp webrtc-caddy:/data/caddy/pki/authorities/local/root.crt ." -ForegroundColor DarkYellow
+Write-Host "  CERT INSTALL (eliminates browser warnings):" -ForegroundColor DarkYellow
+Write-Host "    iOS:     Open https://${lanIP}/cert in Safari -> Install Profile" -ForegroundColor DarkGray
+Write-Host "    Android: Open https://${lanIP}/cert -> Settings > Security > Install" -ForegroundColor DarkGray
+Write-Host "    Manual:  docker cp webrtc-caddy:/data/caddy/pki/authorities/local/root.crt ." -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Commands:" -ForegroundColor White
 Write-Host "    ./setup.ps1 -Stop         Stop all containers" -ForegroundColor DarkGray

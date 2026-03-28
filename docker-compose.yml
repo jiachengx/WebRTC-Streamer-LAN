@@ -1,8 +1,6 @@
 # Copyright (c) 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.
-# Docker Compose – WebRTC Streamer (LAN deployment)
 
 services:
-  # ── Backend: FastAPI Signaling Server ────────────────
   backend:
     build:
       context: ./backend
@@ -12,9 +10,7 @@ services:
     env_file: .env
     networks:
       - internal
-    # NOT exposed to host — only Caddy can reach it
 
-  # ── Caddy: HTTPS + Frontend static files ────────────
   caddy:
     build:
       context: .

@@ -1,25 +1,28 @@
-# HTTP only version (no HTTPS, no TLS issues)
+# Copyright (c) 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.
+# Dual-mode: HTTPS (camera works) + HTTP (fallback)
+
 {
-	auto_https off
+	auto_https disable_redirects
 }
 
-:80 {
+# ── HTTPS on 443 (camera works on all browsers) ──────
+{$LAN_IP}:443 {
+	tls internal
 
-	# ── Security Headers（保留，但移除 HTTPS 限制） ───────
 	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "ALLOWALL"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=*, microphone=*"
-		Content-Security-Policy "default-src 'self' ws://localhost; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' ws://localhost; media-src 'self' blob:; img-src 'self' data: blob:"
+		# Allow both ws:// and wss:// from any LAN origin
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' wss: ws:; media-src 'self' blob:; img-src 'self' data: blob:"
 	}
 
-	# ── WebSocket signaling ──────────────────────────────
 	handle /ws/* {
 		reverse_proxy backend:8000
 	}
 
-	# ── Backend API ──────────────────────────────────────
 	handle /health {
 		reverse_proxy backend:8000
 	}
@@ -28,7 +31,45 @@
 		reverse_proxy backend:8000
 	}
 
-	# ── Frontend ─────────────────────────────────────────
+	# Download Caddy root CA cert (for phone trust)
+	handle /cert {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Disposition "attachment; filename=webrtc-ca.crt"
+		header Content-Type "application/x-x509-ca-cert"
+		file_server
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# ── HTTP on 80 (fallback — camera needs Chrome flag) ──
+:80 {
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "ALLOWALL"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=*, microphone=*"
+		# FIX: allow ws:// from ANY origin, not just localhost
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' wss: ws:; media-src 'self' blob:; img-src 'self' data: blob:"
+	}
+
+	handle /ws/* {
+		reverse_proxy backend:8000
+	}
+
+	handle /health {
+		reverse_proxy backend:8000
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
 	handle {
 		root * /srv
 		try_files {path} /index.html

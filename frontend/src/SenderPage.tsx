@@ -38,13 +38,42 @@ export default function SenderPage() {
   const senderIdRef = useRef<string>('');
 
   const getMediaStream = useCallback(async (facing: 'user' | 'environment', q: string) => {
+    // Check if mediaDevices API is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const isHttp = window.location.protocol === 'http:';
+      const host = window.location.hostname;
+      const search = window.location.search;
+      if (isHttp) {
+        // Auto-redirect to HTTPS after brief message
+        setError(
+          `Camera blocked on HTTP. Redirecting to HTTPS…`
+        );
+        setTimeout(() => {
+          window.location.href = `https://${host}/sender${search}`;
+        }, 1500);
+      } else {
+        setError(
+          `Camera blocked: browser does not trust this certificate. ` +
+          `Install CA cert → https://${host}/cert then reload.`
+        );
+      }
+      return null;
+    }
     try {
       return await navigator.mediaDevices.getUserMedia({
         video: { ...VIDEO_CONSTRAINTS[q], facingMode: facing },
         audio: false,
       });
     } catch (e: any) {
-      setError(`Camera access failed: ${e.message}`);
+      if (e.name === 'NotAllowedError') {
+        setError('Camera permission denied. Please allow camera access and try again.');
+      } else if (e.name === 'NotFoundError') {
+        setError('No camera found on this device.');
+      } else if (e.name === 'NotReadableError') {
+        setError('Camera is in use by another app. Close other apps and retry.');
+      } else {
+        setError(`Camera error: ${e.name} — ${e.message}`);
+      }
       return null;
     }
   }, []);
@@ -185,7 +214,31 @@ export default function SenderPage() {
         )}
       </div>
 
-      {error && <div style={styles.errorBanner}>{error}</div>}
+      {error && (
+        <div style={styles.errorBanner}>
+          <div style={{ marginBottom: '8px' }}>{error}</div>
+          {window.location.protocol === 'http:' && (
+            <div style={styles.errorActions}>
+              <a href={`https://${window.location.hostname}/sender${window.location.search}`}
+                 style={styles.errorLink}>
+                Switch to HTTPS
+              </a>
+              <a href={`https://${window.location.hostname}/cert`}
+                 style={styles.errorLink}>
+                Download CA Cert
+              </a>
+            </div>
+          )}
+          {window.location.protocol === 'https:' && (
+            <div style={styles.errorActions}>
+              <a href={`https://${window.location.hostname}/cert`}
+                 style={styles.errorLink}>
+                Download & Install CA Cert
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Controls */}
       <div style={styles.controls}>
@@ -224,7 +277,9 @@ const styles: Record<string, React.CSSProperties> = {
   placeholder:{ position:'absolute', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', opacity:0.4 },
   monoSmall:{ fontSize:'12px', fontFamily:"'JetBrains Mono',monospace", letterSpacing:'2px', color:'#ff8800' },
   reconnectOverlay:{ position:'absolute', bottom:'16px', left:'50%', transform:'translateX(-50%)', backgroundColor:'rgba(255,136,0,0.15)', border:'1px solid #ff8800', borderRadius:'8px', padding:'8px 20px' },
-  errorBanner:{ backgroundColor:'#331111', color:'#ff6666', padding:'8px 16px', fontSize:'12px', textAlign:'center', fontFamily:"'JetBrains Mono',monospace" },
+  errorBanner:{ backgroundColor:'#331111', color:'#ff6666', padding:'12px 16px', fontSize:'12px', textAlign:'center', fontFamily:"'JetBrains Mono',monospace" },
+  errorActions:{ display:'flex', gap:'8px', justifyContent:'center', marginTop:'4px' },
+  errorLink:{ color:'#7b9fff', textDecoration:'underline', fontSize:'12px', fontFamily:"'JetBrains Mono',monospace" },
   controls:{ padding:'16px', display:'flex', flexDirection:'column', gap:'12px', borderTop:'1px solid #1a1a2e' },
   qualityRow:{ display:'flex', gap:'8px', justifyContent:'center' },
   qualityBtn:{ flex:1, padding:'8px', border:'1px solid #2a2a3e', borderRadius:'6px', backgroundColor:'transparent', color:'#888', fontSize:'12px', fontFamily:"'JetBrains Mono',monospace", cursor:'pointer', transition:'all 0.2s' },

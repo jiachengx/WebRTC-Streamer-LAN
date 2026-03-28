@@ -1,127 +1,96 @@
-
 # WebRTC Streamer for OBS — Multi-Camera Edition
 
 **Copyright © 2026 Stephen Hsu (chiacheng.hsu@owasp.org). All rights reserved.**
 
 Multi-camera low-latency WebRTC streaming from mobile devices to OBS Studio over LAN.
 
-> ⚠️ This project currently runs in **HTTP mode (no TLS)** for simplicity in LAN environments.
-
----
-
 ## Architecture
 
 ```
-Phones (/sender) ──WS──┐
-│
-▼
-┌──────────────────────┐
-│   Docker Host        │
-│                      │
-│   Caddy (:80 HTTP)   │
-│        │             │
-│        ▼             │
-│   FastAPI (8000)     │
-│                      │
-│   React Frontend     │
-└──────────────────────┘
-▲
-│
-HTTP (OBS /receiver)
+┌─────────────┐
+│  Phone A    │──WSS──┐
+│  /sender    │       │
+└─────────────┘       │    ┌──────────────────────────────────┐
+┌─────────────┐       │    │  Docker Host                     │
+│  Phone B    │──WSS──┼───▸│  ┌────────┐   ┌──────────────┐  │
+│  /sender    │       │    │  │ Caddy  │───│ FastAPI Hub   │  │
+└─────────────┘       │    │  │ :443   │   │ (Multi-Sender │  │
+┌─────────────┐       │    │  │ (TLS)  │   │  Signaling)   │  │
+│  Phone C    │──WSS──┘    │  │        │   └──────────────┘  │
+│  /sender    │            │  │        │                      │
+└─────────────┘            │  │        │   ┌──────────────┐  │
+                           │  │        │───│ React SPA    │  │
+┌─────────────┐   HTTPS    │  │        │   └──────────────┘  │
+│  OBS Studio │───────────▸│  └────────┘                      │
+│  /receiver  │            │      internal network             │
+└─────────────┘            └──────────────────────────────────┘
 ```
-
----
 
 ## Quick Start (Windows)
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force; ./setup.ps1
-docker compose up -d --build
-````
-
----
+```
 
 ## Usage
 
-| URL                              | Purpose            |
-| -------------------------------- | ------------------ |
-| `http://<IP>/sender`             | Open on each phone |
-| `http://<IP>/sender?label=CamA`  | Custom label       |
-| `http://<IP>/receiver`           | Grid view          |
-| `http://<IP>/receiver?solo=<ID>` | Solo camera        |
-| `http://<IP>/api/senders`        | JSON list          |
+| URL | Purpose |
+|-----|---------|
+| `https://<IP>/sender` | Open on each phone |
+| `https://<IP>/sender?label=CamA` | Open with custom label |
+| `https://<IP>/receiver` | Grid view (all cameras) |
+| `https://<IP>/receiver?solo=<ID>` | Solo view (one camera, for OBS scene) |
+| `https://<IP>/api/senders` | List connected senders (JSON) |
 
----
+### OBS Workflow
 
-## ⚠️ Important Notes (HTTP Mode)
+**Option A: Grid view** — one Browser Source showing all cameras in an auto-adapting grid. Double-click any cell to solo it.
 
-* Browsers may restrict **camera/microphone access over HTTP**
-* Recommended:
+**Option B: Per-camera sources** — add multiple Browser Sources, each with `/receiver?solo=<SENDER_ID>`. Get the sender ID from the sender's status bar or the `/api/senders` endpoint. Assign each to different OBS Scenes for switching.
 
-  * Use **Chrome / Edge**
-  * Access via `http://<LAN-IP>` (not localhost for phones)
-* HTTPS is required for production or internet deployment
+**Option C: Hybrid** — use the grid for monitoring and solo sources for your live scenes.
 
----
+### Sender Labels
 
-## OBS Workflow
-
-**Option A: Grid view**
-
-* One Browser Source
-* Auto layout for all cameras
-* Double-click to solo
-
-**Option B: Per-camera**
-
-* Multiple Browser Sources
-* `/receiver?solo=<ID>`
-
-**Option C: Hybrid**
-
-* Grid for monitoring
-* Solo for live scenes
-
----
+Each phone gets an auto-generated label like `Cam-a1b2`. To set a custom label, open the sender URL with a query parameter: `/sender?label=FrontCam`. Labels appear in the receiver grid.
 
 ## Auto-Reconnect
 
-* WebSocket heartbeat (5s)
-* Exponential retry (0.5s → 15s)
-* ICE restart + renegotiation
+Three-layer reconnect system:
 
----
+1. **WebSocket heartbeat** — ping every 5s, reconnect if no pong within 12s
+2. **Exponential backoff** — 0.5s → 1s → 2s → 4s → 15s retry intervals
+3. **ICE recovery** — automatic ICE restart (×3), then full renegotiation
 
 ## Security
 
-* Backend isolated in Docker network
-* Only HTTP port 80 exposed
-* No secrets in code
-
----
+- Backend isolated on internal Docker network
+- Only Caddy port 443 exposed to host
+- HSTS, CSP, X-Content-Type-Options headers
+- No hardcoded secrets (all via `.env`)
 
 ## File Structure
 
 ```
 webrtc-streamer/
 ├── backend/
-├── frontend/
+│   ├── Dockerfile
+│   ├── main.py              # FastAPI Hub (multi-sender signaling)
+│   └── requirements.txt
+├── frontend/src/
+│   ├── main.tsx
+│   ├── App.tsx               # Router + home page
+│   ├── SenderPage.tsx        # Mobile camera (with label + ID)
+│   ├── ReceiverPage.tsx      # Multi-stream grid + solo mode
+│   └── webrtc.ts             # Signaling + PeerConnection factory
 ├── Caddyfile
+├── Dockerfile.caddy
 ├── docker-compose.yml
 ├── setup.ps1
 └── README.md
 ```
 
----
-
 ## License
 
-MIT License
-
----
-
-## Author
-
-Stephen Hsu
-[chiacheng.hsu@owasp.org](mailto:chiacheng.hsu@owasp.org)
-
+This software is 100% owned and licensed by Stephen Hsu.
+Unauthorized copying or distribution is strictly prohibited.
